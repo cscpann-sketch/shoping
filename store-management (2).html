@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Store Management - MeraStore</title>
+<style>
+  :root{
+    --navy:#1c3a52; --navy-dark:#122536; --cream:#f6f4ee; --ink:#1f2a24;
+    --line:#dfe3e8; --green:#1a7a4c; --amber:#d98c3c; --red:#c1443c; --purple:#7a4dc4;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Segoe UI',system-ui,sans-serif; background:var(--cream); color:var(--ink);}
+  header{
+    background:var(--navy); color:#fff; padding:14px 20px; display:flex;
+    justify-content:space-between; align-items:center; box-shadow:0 2px 8px rgba(0,0,0,.15);
+  }
+  header h1{font-size:1.3em;}
+  header h1 span{color:var(--amber);}
+  #logoutBtn{background:var(--navy-dark); color:#fff; border:none; padding:8px 14px; border-radius:6px; cursor:pointer;}
+
+  /* Login */
+  #loginScreen{
+    display:flex; align-items:center; justify-content:center; height:100vh; background:var(--navy);
+  }
+  .login-box{background:#fff; padding:36px; border-radius:14px; width:340px; text-align:center;}
+  .login-box h2{margin-bottom:6px; color:var(--navy);}
+  .login-box p{color:#888; font-size:.85em; margin-bottom:20px;}
+  .login-box input{width:100%; padding:11px; border:1px solid var(--line); border-radius:8px; margin-bottom:12px; font-size:1em;}
+  .login-box button{width:100%; padding:11px; background:var(--navy); color:#fff; border:none; border-radius:8px; font-weight:700; cursor:pointer;}
+  .login-err{color:var(--red); font-size:.85em; min-height:18px; margin-top:6px;}
+
+  #app{display:none;}
+  .tabs{display:flex; gap:4px; background:#fff; padding:0 20px; border-bottom:1px solid var(--line); overflow-x:auto;}
+  .tab-btn{background:none; border:none; padding:14px 16px; cursor:pointer; font-weight:600; color:#666; border-bottom:3px solid transparent; white-space:nowrap;}
+  .tab-btn.active{color:var(--navy); border-color:var(--navy);}
+  main{max-width:1100px; margin:0 auto; padding:20px;}
+  .view{display:none;} .view.active{display:block;}
+
+  .stat-row{display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:14px; margin-bottom:20px;}
+  .stat-card{background:#fff; border:1px solid var(--line); border-radius:12px; padding:16px;}
+  .stat-card .num{font-size:1.8em; font-weight:700; color:var(--navy);}
+  .stat-card .lbl{font-size:.8em; color:#888;}
+
+  .panel{background:#fff; border:1px solid var(--line); border-radius:12px; padding:18px; margin-bottom:18px;}
+  .panel h3{margin-bottom:14px;}
+  .form-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .form-grid.full > *{grid-column:1/-1;}
+  input, select, textarea{
+    padding:10px; border:1px solid var(--line); border-radius:8px; font-size:.9em; width:100%;
+  }
+  label{font-size:.78em; color:#555; font-weight:600; display:block; margin-bottom:4px;}
+  .btn{padding:10px 16px; border:none; border-radius:8px; cursor:pointer; font-weight:600; font-size:.9em;}
+  .btn-primary{background:var(--navy); color:#fff;}
+  .btn-green{background:var(--green); color:#fff;}
+  .btn-red{background:var(--red); color:#fff;}
+  .btn-amber{background:var(--amber); color:#fff;}
+  .btn-sm{padding:6px 10px; font-size:.8em;}
+
+  table{width:100%; border-collapse:collapse; font-size:.88em;}
+  th, td{text-align:left; padding:10px 8px; border-bottom:1px solid var(--line);}
+  th{color:#888; font-weight:600; font-size:.8em; text-transform:uppercase;}
+  img.thumb{width:44px; height:44px; object-fit:cover; border-radius:6px; background:#eee;}
+
+  .badge{display:inline-block; padding:4px 10px; border-radius:20px; font-size:.72em; font-weight:700; color:#fff;}
+  .b-pending{background:#999;} .b-confirmed{background:#3468a8;}
+  .b-assigned{background:var(--amber);} .b-out_for_delivery{background:var(--purple);}
+  .b-delivered{background:var(--green);} .b-cancelled{background:var(--red);}
+
+  .filter-row{display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap;}
+  .filter-row button{padding:7px 14px; border:1px solid var(--line); background:#fff; border-radius:20px; cursor:pointer; font-size:.82em;}
+  .filter-row button.active{background:var(--navy); color:#fff; border-color:var(--navy);}
+  .empty-row{text-align:center; color:#999; padding:24px;}
+  .order-items-cell{font-size:.85em; color:#555; max-width:220px;}
+
+  #soundBtn{background:var(--navy-dark); color:#fff; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; margin-right:8px; font-size:.85em;}
+  #soundBtn.on{background:var(--green);}
+  .tab-btn{position:relative;}
+  .new-badge{
+    position:absolute; top:4px; right:2px; background:var(--red); color:#fff; border-radius:20px;
+    font-size:.68em; padding:1px 6px; font-weight:700; animation:pulseBadge 1s infinite;
+  }
+  @keyframes pulseBadge{0%,100%{transform:scale(1);}50%{transform:scale(1.2);}}
+
+  #toastWrap{position:fixed; top:16px; right:16px; z-index:200; display:flex; flex-direction:column; gap:10px; max-width:320px;}
+  .toast{
+    background:#fff; border-left:5px solid var(--green); border-radius:10px; padding:14px 16px;
+    box-shadow:0 6px 20px rgba(0,0,0,.18); cursor:pointer; animation:slideIn .3s ease-out;
+  }
+  .toast .t-title{font-weight:700; color:var(--green); display:flex; align-items:center; gap:6px; margin-bottom:4px;}
+  .toast .t-body{font-size:.88em; color:#444;}
+  @keyframes slideIn{from{transform:translateX(120%); opacity:0;} to{transform:translateX(0); opacity:1;}}
+  .toast.leaving{animation:slideOut .3s ease-in forwards;}
+  @keyframes slideOut{to{transform:translateX(120%); opacity:0;}}
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="login-box">
+    <h2>Store Management</h2>
+    <p>Admin panel mein login karein</p>
+    <input type="password" id="adminPass" placeholder="Password" onkeydown="if(event.key==='Enter')adminLogin()">
+    <button onclick="adminLogin()">Login</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+</div>
+
+<div id="app">
+  <header>
+    <h1>Store<span>Management</span></h1>
+    <div>
+      <button id="soundBtn" onclick="toggleSound()">🔔 Alert: Off</button>
+      <button id="logoutBtn" onclick="logout()">Logout</button>
+    </div>
+  </header>
+  <div id="toastWrap"></div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('dash')">Dashboard</button>
+    <button class="tab-btn" id="ordersTabBtn" onclick="switchTab('orders')">Orders<span class="new-badge" id="newOrderBadge" style="display:none;">0</span></button>
+    <button class="tab-btn" onclick="switchTab('products')">Products</button>
+    <button class="tab-btn" onclick="switchTab('boys')">Delivery Boys</button>
+  </div>
+
+  <main>
+    <div class="view active" id="view-dash">
+      <div class="stat-row" id="statRow"></div>
+      <div class="panel">
+        <h3>Recent Orders</h3>
+        <table><thead><tr><th>Order</th><th>Customer</th><th>Total</th><th>Status</th></tr></thead>
+        <tbody id="recentOrdersBody"><tr><td colspan="4" class="empty-row">Loading...</td></tr></tbody></table>
+      </div>
+    </div>
+
+    <div class="view" id="view-orders">
+      <div class="filter-row" id="orderFilters"></div>
+      <div class="panel">
+        <table>
+          <thead><tr><th>Order</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th>Delivery Boy</th><th>Action</th></tr></thead>
+          <tbody id="ordersBody"><tr><td colspan="7" class="empty-row">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="view" id="view-products">
+      <div class="panel">
+        <h3 id="prodFormTitle">Naya Product Add Karein</h3>
+        <div class="form-grid">
+          <div><label>Product Naam</label><input id="pName" placeholder="e.g. Rice 5kg"></div>
+          <div><label>Price (₹)</label><input id="pPrice" type="number"></div>
+          <div><label>Stock</label><input id="pStock" type="number"></div>
+          <div><label>Category</label><input id="pCategory" placeholder="e.g. Grocery"></div>
+          <div class="form-grid full"><label>Image URL (optional)</label><input id="pImage" placeholder="https://..."></div>
+        </div>
+        <div style="margin-top:12px; display:flex; gap:8px;">
+          <button class="btn btn-green" onclick="saveProduct()">Save Product</button>
+          <button class="btn" id="cancelEditBtn" style="display:none;background:#eee;" onclick="cancelEditProduct()">Cancel</button>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>Sabhi Products</h3>
+        <table>
+          <thead><tr><th>Image</th><th>Naam</th><th>Price</th><th>Stock</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody id="productsBody"><tr><td colspan="6" class="empty-row">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="view" id="view-boys">
+      <div class="panel">
+        <h3>Naya Delivery Boy Add Karein</h3>
+        <div class="form-grid">
+          <div><label>Naam</label><input id="bName" placeholder="Delivery boy ka naam"></div>
+          <div><label>Phone</label><input id="bPhone" placeholder="Mobile number"></div>
+          <div><label>Login Password</label><input id="bPass" placeholder="Simple password set karein"></div>
+        </div>
+        <button class="btn btn-green" style="margin-top:12px;" onclick="addDeliveryBoy()">Add Delivery Boy</button>
+      </div>
+      <div class="panel">
+        <h3>Sabhi Delivery Boys</h3>
+        <table>
+          <thead><tr><th>Naam</th><th>Phone</th><th>Active Orders</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody id="boysBody"><tr><td colspan="5" class="empty-row">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ============ FIREBASE SETUP ============ -->
+<!-- IMPORTANT: index.html jaisa hi SAME Firebase config yahan bhi daalein, taaki teeno
+     pages ek hi Firestore database use karein aur data sync ho. -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAWVKmhzDeuQDpbJpBekLiPYhE3X11zLbc",
+  authDomain: "online-shoping-9299a.firebaseapp.com",
+  projectId: "online-shoping-9299a",
+  storageBucket: "online-shoping-9299a.firebasestorage.app",
+  messagingSenderId: "175906698523",
+  appId: "1:175906698523:web:88a1ba267c88ca3b9a8fbe",
+  measurementId: "G-C6VKH85QPJ"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// Default admin password = "admin123". Ye Firestore doc settings/admin ke "password"
+// field se check hota hai; agar doc exist nahi karta to default use hota hai.
+const DEFAULT_ADMIN_PASS = "admin123";
+
+let products = [], orders = [], deliveryBoys = [];
+let editingProductId = null;
+let orderFilter = 'all';
+
+// ---- New Order Sound + Notification Alert ----
+let soundOn = localStorage.getItem('sm_sound') === '1';
+let ordersFirstLoad = true;
+let newOrderCount = 0;
+
+function updateSoundBtn(){
+  const btn = document.getElementById('soundBtn');
+  btn.textContent = soundOn ? '🔔 Alert: On' : '🔕 Alert: Off';
+  btn.classList.toggle('on', soundOn);
+}
+function toggleSound(){
+  soundOn = !soundOn;
+  localStorage.setItem('sm_sound', soundOn ? '1' : '0');
+  updateSoundBtn();
+  if(soundOn){
+    if('Notification' in window && Notification.permission === 'default'){
+      Notification.requestPermission();
+    }
+    playBeep(); // confirmation beep so admin knows it's working
+  }
+}
+updateSoundBtn();
+
+function playBeep(){
+  try{
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const times = [0, 0.25];
+    times.forEach(t=>{
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime + t);
+      gain.gain.exponentialRampToValueAtTime(0.35, ctx.currentTime + t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + t + 0.22);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + t);
+      osc.stop(ctx.currentTime + t + 0.25);
+    });
+  }catch(e){}
+}
+
+function showToast(order){
+  const wrap = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.innerHTML = `<div class="t-title">🛎️ Naya Order Aaya!</div>
+    <div class="t-body">${escapeHtml(order.customerName)} — ₹${order.total}<br>
+    ${order.items.map(i=>i.name+' x'+i.qty).join(', ')}</div>`;
+  el.onclick = ()=>{ document.getElementById('ordersTabBtn').click(); dismissToast(el); };
+  wrap.appendChild(el);
+  setTimeout(()=>dismissToast(el), 8000);
+}
+function dismissToast(el){
+  if(!el.parentNode) return;
+  el.classList.add('leaving');
+  setTimeout(()=> el.remove(), 300);
+}
+
+function bumpNewOrderBadge(){
+  newOrderCount++;
+  const badge = document.getElementById('newOrderBadge');
+  badge.style.display = 'inline-block';
+  badge.textContent = newOrderCount;
+}
+function clearNewOrderBadge(){
+  newOrderCount = 0;
+  document.getElementById('newOrderBadge').style.display = 'none';
+}
+
+async function adminLogin(){
+  const pass = document.getElementById('adminPass').value;
+  let realPass = DEFAULT_ADMIN_PASS;
+  try{
+    const doc = await db.collection('settings').doc('admin').get();
+    if(doc.exists && doc.data().password) realPass = doc.data().password;
+  }catch(e){}
+  if(pass === realPass){
+    document.getElementById('loginScreen').style.display='none';
+    document.getElementById('app').style.display='block';
+    sessionStorage.setItem('sm_admin','1');
+    initListeners();
+  }else{
+    document.getElementById('loginErr').textContent = 'Galat password';
+  }
+}
+function logout(){
+  sessionStorage.removeItem('sm_admin');
+  location.reload();
+}
+if(sessionStorage.getItem('sm_admin')==='1'){
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('app').style.display='block';
+  initListeners();
+}
+
+function switchTab(tab){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  const btn = event ? event.currentTarget : document.getElementById('ordersTabBtn');
+  btn.classList.add('active');
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+tab).classList.add('active');
+  if(tab==='orders') clearNewOrderBadge();
+}
+
+function initListeners(){
+  db.collection('products').orderBy('name').onSnapshot(snap=>{
+    products = []; snap.forEach(d=>products.push({id:d.id,...d.data()}));
+    renderProducts(); renderDashboard();
+  });
+  db.collection('orders').orderBy('createdAt','desc').onSnapshot(snap=>{
+    orders = []; snap.forEach(d=>orders.push({id:d.id,...d.data()}));
+    renderOrders(); renderDashboard(); renderBoys();
+
+    if(ordersFirstLoad){
+      ordersFirstLoad = false; // pehli baar load hone par purane orders ke liye alert nahi
+    }else{
+      snap.docChanges().forEach(change=>{
+        if(change.type === 'added'){
+          const o = {id: change.doc.id, ...change.doc.data()};
+          if(soundOn) playBeep();
+          bumpNewOrderBadge();
+          showToast(o);
+          if(soundOn && 'Notification' in window && Notification.permission === 'granted'){
+            new Notification('Naya Order Aaya! 🛒', {
+              body: `${o.customerName} — ₹${o.total}`,
+              tag: 'order-'+o.id
+            });
+          }
+        }
+      });
+    }
+  });
+  db.collection('deliveryBoys').orderBy('name').onSnapshot(snap=>{
+    deliveryBoys = []; snap.forEach(d=>deliveryBoys.push({id:d.id,...d.data()}));
+    renderBoys(); renderOrders();
+  });
+}
+
+// ---- Dashboard ----
+function renderDashboard(){
+  const pending = orders.filter(o=>o.status==='pending').length;
+  const active = orders.filter(o=>['confirmed','assigned','out_for_delivery'].includes(o.status)).length;
+  const delivered = orders.filter(o=>o.status==='delivered').length;
+  const revenue = orders.filter(o=>o.status==='delivered').reduce((s,o)=>s+(o.total||0),0);
+  document.getElementById('statRow').innerHTML = `
+    <div class="stat-card"><div class="num">${pending}</div><div class="lbl">Naye Orders</div></div>
+    <div class="stat-card"><div class="num">${active}</div><div class="lbl">Process Mein</div></div>
+    <div class="stat-card"><div class="num">${delivered}</div><div class="lbl">Delivered</div></div>
+    <div class="stat-card"><div class="num">₹${revenue}</div><div class="lbl">Total Revenue</div></div>
+    <div class="stat-card"><div class="num">${products.length}</div><div class="lbl">Products</div></div>
+    <div class="stat-card"><div class="num">${deliveryBoys.length}</div><div class="lbl">Delivery Boys</div></div>
+  `;
+  const body = document.getElementById('recentOrdersBody');
+  const recent = orders.slice(0,8);
+  body.innerHTML = recent.length ? recent.map(o=>`
+    <tr><td>#${o.id.slice(-8).toUpperCase()}</td><td>${escapeHtml(o.customerName)}</td>
+    <td>₹${o.total}</td><td><span class="badge b-${o.status}">${o.status}</span></td></tr>
+  `).join('') : '<tr><td colspan="4" class="empty-row">Koi order nahi</td></tr>';
+}
+
+// ---- Products ----
+function renderProducts(){
+  const body = document.getElementById('productsBody');
+  body.innerHTML = products.length ? products.map(p=>`
+    <tr>
+      <td><img class="thumb" src="${p.image||'https://placehold.co/60'}"></td>
+      <td>${escapeHtml(p.name)}</td>
+      <td>₹${p.price}</td>
+      <td>${p.stock}</td>
+      <td><span class="badge ${p.active?'b-delivered':'b-cancelled'}">${p.active?'Active':'Hidden'}</span></td>
+      <td>
+        <button class="btn btn-sm btn-primary" onclick="editProduct('${p.id}')">Edit</button>
+        <button class="btn btn-sm ${p.active?'btn-amber':'btn-green'}" onclick="toggleProductActive('${p.id}',${!p.active})">${p.active?'Hide':'Show'}</button>
+        <button class="btn btn-sm btn-red" onclick="deleteProduct('${p.id}')">Delete</button>
+      </td>
+    </tr>
+  `).join('') : '<tr><td colspan="6" class="empty-row">Koi product nahi hai</td></tr>';
+}
+function editProduct(id){
+  const p = products.find(x=>x.id===id);
+  if(!p) return;
+  editingProductId = id;
+  document.getElementById('pName').value = p.name;
+  document.getElementById('pPrice').value = p.price;
+  document.getElementById('pStock').value = p.stock;
+  document.getElementById('pCategory').value = p.category||'';
+  document.getElementById('pImage').value = p.image||'';
+  document.getElementById('prodFormTitle').textContent = 'Product Edit Karein';
+  document.getElementById('cancelEditBtn').style.display='inline-block';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function cancelEditProduct(){
+  editingProductId = null;
+  ['pName','pPrice','pStock','pCategory','pImage'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('prodFormTitle').textContent = 'Naya Product Add Karein';
+  document.getElementById('cancelEditBtn').style.display='none';
+}
+async function saveProduct(){
+  const name = document.getElementById('pName').value.trim();
+  const price = parseFloat(document.getElementById('pPrice').value);
+  const stock = parseInt(document.getElementById('pStock').value);
+  const category = document.getElementById('pCategory').value.trim();
+  const image = document.getElementById('pImage').value.trim();
+  if(!name || isNaN(price) || isNaN(stock)){ alert('Naam, price aur stock bharein'); return; }
+  const data = { name, price, stock, category: category||'', image: image||'', active: true };
+  try{
+    if(editingProductId){
+      await db.collection('products').doc(editingProductId).update(data);
+    }else{
+      await db.collection('products').add(data);
+    }
+    cancelEditProduct();
+  }catch(e){ alert('Error: '+e.message); }
+}
+function toggleProductActive(id, val){
+  db.collection('products').doc(id).update({active:val});
+}
+function deleteProduct(id){
+  if(confirm('Ye product delete karna hai?')) db.collection('products').doc(id).delete();
+}
+
+// ---- Orders ----
+function renderOrderFilters(){
+  const statuses = ['all','pending','confirmed','assigned','out_for_delivery','delivered','cancelled'];
+  document.getElementById('orderFilters').innerHTML = statuses.map(s=>
+    `<button class="${orderFilter===s?'active':''}" onclick="setOrderFilter('${s}')">${s.replace(/_/g,' ')}</button>`
+  ).join('');
+}
+function setOrderFilter(s){ orderFilter=s; renderOrderFilters(); renderOrders(); }
+renderOrderFilters();
+
+function renderOrders(){
+  const body = document.getElementById('ordersBody');
+  const list = orderFilter==='all' ? orders : orders.filter(o=>o.status===orderFilter);
+  if(!list.length){ body.innerHTML='<tr><td colspan="7" class="empty-row">Koi order nahi</td></tr>'; return; }
+  body.innerHTML = list.map(o=>{
+    let action = '';
+    if(o.status==='pending'){
+      action = `<button class="btn btn-sm btn-primary" onclick="setOrderStatus('${o.id}','confirmed')">Confirm</button>
+                 <button class="btn btn-sm btn-red" onclick="setOrderStatus('${o.id}','cancelled')">Cancel</button>`;
+    }else if(o.status==='confirmed'){
+      const boyOptions = deliveryBoys.filter(b=>b.active!==false).map(b=>`<option value="${b.id}">${escapeHtml(b.name)}</option>`).join('');
+      action = `<select id="boySel-${o.id}"><option value="">Delivery boy chunein</option>${boyOptions}</select>
+                 <button class="btn btn-sm btn-amber" onclick="assignBoy('${o.id}')">Assign</button>`;
+    }else if(o.status==='assigned' || o.status==='out_for_delivery'){
+      action = `<span style="color:#888;font-size:.85em;">Delivery boy update karega</span>`;
+    }else{
+      action = `<span style="color:#888;font-size:.85em;">—</span>`;
+    }
+    return `<tr>
+      <td>#${o.id.slice(-8).toUpperCase()}</td>
+      <td>${escapeHtml(o.customerName)}<br><span style="color:#888;font-size:.8em;">${o.phone}</span></td>
+      <td class="order-items-cell">${o.items.map(i=>i.name+' x'+i.qty).join(', ')}</td>
+      <td>₹${o.total}</td>
+      <td><span class="badge b-${o.status}">${o.status.replace(/_/g,' ')}</span></td>
+      <td>${o.deliveryBoyName ? escapeHtml(o.deliveryBoyName) : '—'}</td>
+      <td>${action}</td>
+    </tr>`;
+  }).join('');
+}
+function setOrderStatus(id, status){
+  db.collection('orders').doc(id).update({status, updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+}
+function assignBoy(orderId){
+  const sel = document.getElementById('boySel-'+orderId);
+  const boyId = sel.value;
+  if(!boyId){ alert('Delivery boy chunein'); return; }
+  const boy = deliveryBoys.find(b=>b.id===boyId);
+  db.collection('orders').doc(orderId).update({
+    status:'assigned', deliveryBoyId:boyId, deliveryBoyName:boy.name,
+    updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+  });
+}
+
+// ---- Delivery Boys ----
+function addDeliveryBoy(){
+  const name = document.getElementById('bName').value.trim();
+  const phone = document.getElementById('bPhone').value.trim();
+  const pass = document.getElementById('bPass').value.trim();
+  if(!name || !phone || !pass){ alert('Sabhi fields bharein'); return; }
+  db.collection('deliveryBoys').add({name, phone, password:pass, active:true}).then(()=>{
+    document.getElementById('bName').value='';
+    document.getElementById('bPhone').value='';
+    document.getElementById('bPass').value='';
+  });
+}
+function renderBoys(){
+  const body = document.getElementById('boysBody');
+  body.innerHTML = deliveryBoys.length ? deliveryBoys.map(b=>{
+    const activeOrders = orders.filter(o=>o.deliveryBoyId===b.id && ['assigned','out_for_delivery'].includes(o.status)).length;
+    return `<tr>
+      <td>${escapeHtml(b.name)}</td>
+      <td>${escapeHtml(b.phone)}</td>
+      <td>${activeOrders}</td>
+      <td><span class="badge ${b.active!==false?'b-delivered':'b-cancelled'}">${b.active!==false?'Active':'Inactive'}</span></td>
+      <td>
+        <button class="btn btn-sm ${b.active!==false?'btn-amber':'btn-green'}" onclick="toggleBoyActive('${b.id}',${b.active===false})">${b.active!==false?'Deactivate':'Activate'}</button>
+        <button class="btn btn-sm btn-red" onclick="deleteBoy('${b.id}')">Delete</button>
+      </td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="5" class="empty-row">Koi delivery boy nahi hai</td></tr>';
+}
+function toggleBoyActive(id,val){ db.collection('deliveryBoys').doc(id).update({active:val}); }
+function deleteBoy(id){
+  if(confirm('Ye delivery boy delete karna hai?')) db.collection('deliveryBoys').doc(id).delete();
+}
+
+function escapeHtml(s){
+  return (s||'').toString().replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+</script>
+</body>
+</html>
