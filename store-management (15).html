@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Store Management - MeraStore</title>
+<style>
+  :root{
+    --navy:#1c3a52; --navy-dark:#122536; --cream:#f6f4ee; --ink:#1f2a24;
+    --line:#dfe3e8; --green:#1a7a4c; --amber:#d98c3c; --red:#c1443c; --purple:#7a4dc4;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Segoe UI',system-ui,sans-serif; background:var(--cream); color:var(--ink);}
+  header{
+    background:var(--navy); color:#fff; padding:14px 20px; display:flex;
+    justify-content:space-between; align-items:center; box-shadow:0 2px 8px rgba(0,0,0,.15);
+  }
+  header h1{font-size:1.3em;}
+  header h1 span{color:var(--amber);}
+  #logoutBtn{background:var(--navy-dark); color:#fff; border:none; padding:8px 14px; border-radius:6px; cursor:pointer;}
+
+  /* Login */
+  #loginScreen{
+    display:flex; align-items:center; justify-content:center; height:100vh; background:var(--navy);
+  }
+  .login-box{background:#fff; padding:36px; border-radius:14px; width:340px; text-align:center;}
+  .login-box h2{margin-bottom:6px; color:var(--navy);}
+  .login-box p{color:#888; font-size:.85em; margin-bottom:20px;}
+  .login-box input{width:100%; padding:11px; border:1px solid var(--line); border-radius:8px; margin-bottom:12px; font-size:1em;}
+  .login-box button{width:100%; padding:11px; background:var(--navy); color:#fff; border:none; border-radius:8px; font-weight:700; cursor:pointer;}
+  .login-err{color:var(--red); font-size:.85em; min-height:18px; margin-top:6px;}
+
+  #app{display:none;}
+  .tabs{display:flex; gap:4px; background:#fff; padding:0 20px; border-bottom:1px solid var(--line); overflow-x:auto;}
+  .tab-btn{background:none; border:none; padding:14px 16px; cursor:pointer; font-weight:600; color:#666; border-bottom:3px solid transparent; white-space:nowrap;}
+  .tab-btn.active{color:var(--navy); border-color:var(--navy);}
+  main{max-width:1100px; margin:0 auto; padding:20px;}
+  .view{display:none;} .view.active{display:block;}
+
+  .stat-row{display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:14px; margin-bottom:20px;}
+  .stat-card{background:#fff; border:1px solid var(--line); border-radius:12px; padding:16px;}
+  .stat-card .num{font-size:1.8em; font-weight:700; color:var(--navy);}
+  .stat-card .lbl{font-size:.8em; color:#888;}
+
+  .panel{background:#fff; border:1px solid var(--line); border-radius:12px; padding:18px; margin-bottom:18px;}
+  .panel h3{margin-bottom:14px;}
+  .form-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .form-grid.full > *{grid-column:1/-1;}
+  input, select, textarea{
+    padding:10px; border:1px solid var(--line); border-radius:8px; font-size:.9em; width:100%;
+  }
+  label{font-size:.78em; color:#555; font-weight:600; display:block; margin-bottom:4px;}
+  .btn{padding:10px 16px; border:none; border-radius:8px; cursor:pointer; font-weight:600; font-size:.9em;}
+  .btn-primary{background:var(--navy); color:#fff;}
+  .btn-green{background:var(--green); color:#fff;}
+  .btn-red{background:var(--red); color:#fff;}
+  .btn-amber{background:var(--amber); color:#fff;}
+  .btn-sm{padding:6px 10px; font-size:.8em;}
+
+  table{width:100%; border-collapse:collapse; font-size:.88em;}
+  th, td{text-align:left; padding:10px 8px; border-bottom:1px solid var(--line);}
+  th{color:#888; font-weight:600; font-size:.8em; text-transform:uppercase;}
+  img.thumb{width:44px; height:44px; object-fit:cover; border-radius:6px; background:#eee;}
+
+  .badge{display:inline-block; padding:4px 10px; border-radius:20px; font-size:.72em; font-weight:700; color:#fff;}
+  .b-pending{background:#999;} .b-confirmed{background:#3468a8;}
+  .b-assigned{background:var(--amber);} .b-out_for_delivery{background:var(--purple);}
+  .b-delivered{background:var(--green);} .b-cancelled{background:var(--red);}
+
+  .filter-row{display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap;}
+  .filter-row button{padding:10px 20px; border:1px solid var(--line); background:#fff; border-radius:30px; cursor:pointer; font-size:.88em; font-weight:600; color:#333;}
+  .filter-row button.active{background:var(--navy); color:#fff; border-color:var(--navy);}
+  .empty-row{text-align:center; color:#999; padding:24px;}
+  .order-items-cell{font-size:.85em; color:#555; max-width:220px;}
+
+  .btn-loc{background:var(--blue,#3468a8); color:#fff;}
+  .no-loc{color:#aaa; font-size:.78em;}
+
+  /* Order list — flexible card rows (order/customer/address, items wrap, total/status/action) */
+  .orders-panel{padding:0; overflow:hidden;}
+  .orders-scroll{overflow-x:visible;}
+  .order-head{display:none;}
+
+  .order-row{
+    padding:18px 16px;
+    border-bottom:1px solid var(--line);
+    background:#fff;
+  }
+  .order-row:nth-child(even){background:#ececec;}
+  .order-row:last-child{border-bottom:none;}
+
+  .order-top{display:flex; flex-wrap:wrap; gap:20px 32px; margin-bottom:16px;}
+  .order-col{display:flex; flex-direction:column; gap:4px; min-width:0;}
+  .field-label{display:none;}
+  .ord-order{min-width:100px;}
+  .ord-customer{min-width:140px;}
+  .ord-address{flex:1 1 220px; min-width:200px;}
+  .order-id{font-weight:700; font-size:.95em; word-break:break-all;}
+  .order-customer{font-weight:600;}
+  .order-phone{color:#888; font-size:.8em;}
+  .order-address{color:#555; font-size:.85em; word-break:break-word;}
+
+  .order-items-row{display:flex; flex-wrap:wrap; gap:14px 30px; margin-bottom:16px;}
+  .order-item-row{display:flex; align-items:center; gap:9px; min-width:160px;}
+  .order-item-row img{width:57px; height:57px; object-fit:cover; border-radius:9px; background:#eee; flex-shrink:0;}
+  .order-item-row span{font-size:.88em; color:#333; word-break:break-word;}
+
+  .order-meta-row{display:flex; flex-wrap:wrap; align-items:center; gap:16px 30px;}
+  .order-total-block{min-width:100px;}
+  .order-total{font-weight:700; font-size:1.1em; color:var(--navy);}
+  .order-subtotal{font-size:.75em; color:#888; line-height:1.5; margin-top:2px;}
+  .order-status-block{display:flex; align-items:center; gap:10px;}
+  .order-boy-block{color:#888; font-size:.88em;}
+  .order-actions-col{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-left:auto;}
+  .order-actions-col select{max-width:180px;}
+  .badge{white-space:nowrap;}
+
+  /* This flex-based layout wraps naturally on small screens without needing a separate stacked mode */
+  .overlay{
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:200;
+    align-items:center; justify-content:center;
+  }
+  .overlay.show{display:flex;}
+  .map-modal{background:#fff; width:92%; max-width:480px; border-radius:14px; padding:18px; max-height:90vh; overflow-y:auto;}
+  .map-modal-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;}
+  .close-x{background:none; border:none; font-size:1.4em; cursor:pointer; color:#666;}
+  #mapFrame{width:100%; height:320px; border:0; border-radius:10px; background:#eee;}
+  .map-meta{font-size:.82em; color:#666; margin:10px 0;}
+  .map-link{display:block; text-align:center; text-decoration:none; margin-top:10px;}
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="login-box">
+    <h2>Store Management</h2>
+    <p>Admin panel mein login karein</p>
+    <input type="password" id="adminPass" placeholder="Password" onkeydown="if(event.key==='Enter')adminLogin()">
+    <button onclick="adminLogin()">Login</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+</div>
+
+<div id="app">
+  <header>
+    <h1>Store<span>Management</span></h1>
+    <button id="logoutBtn" onclick="logout()">Logout</button>
+  </header>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('dash')">Dashboard</button>
+    <button class="tab-btn" onclick="switchTab('orders')">Orders</button>
+    <button class="tab-btn" onclick="switchTab('products')">Products</button>
+    <button class="tab-btn" onclick="switchTab('boys')">Delivery Boys</button>
+    <button class="tab-btn" onclick="switchTab('settings')">Settings</button>
+  </div>
+
+  <main>
+    <div class="view active" id="view-dash">
+      <div class="stat-row" id="statRow"></div>
+      <div class="panel">
+        <h3>Recent Orders</h3>
+        <table><thead><tr><th>Order</th><th>Customer</th><th>Total</th><th>Status</th></tr></thead>
+        <tbody id="recentOrdersBody"><tr><td colspan="4" class="empty-row">Loading...</td></tr></tbody></table>
+      </div>
+    </div>
+
+    <div class="view" id="view-orders">
+      <div class="filter-row" id="orderFilters"></div>
+      <div class="panel orders-panel">
+        <div class="orders-scroll">
+          <div id="ordersBody"><div class="empty-row">Loading...</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="view" id="view-products">
+      <div class="panel">
+        <h3 id="prodFormTitle">Naya Product Add Karein</h3>
+        <div class="form-grid">
+          <div><label>Product Naam</label><input id="pName" placeholder="e.g. Rice 5kg"></div>
+          <div><label>Price (₹)</label><input id="pPrice" type="number"></div>
+          <div><label>Stock</label><input id="pStock" type="number"></div>
+          <div><label>Category</label><input id="pCategory" placeholder="e.g. Grocery"></div>
+          <div class="form-grid full"><label>Image URL (optional)</label><input id="pImage" placeholder="https://..."></div>
+        </div>
+        <div style="margin-top:12px; display:flex; gap:8px;">
+          <button class="btn btn-green" onclick="saveProduct()">Save Product</button>
+          <button class="btn" id="cancelEditBtn" style="display:none;background:#eee;" onclick="cancelEditProduct()">Cancel</button>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>Sabhi Products</h3>
+        <table>
+          <thead><tr><th>Image</th><th>Naam</th><th>Price</th><th>Stock</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody id="productsBody"><tr><td colspan="6" class="empty-row">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="view" id="view-boys">
+      <div class="panel">
+        <h3>Naya Delivery Boy Add Karein</h3>
+        <div class="form-grid">
+          <div><label>Naam</label><input id="bName" placeholder="Delivery boy ka naam"></div>
+          <div><label>Phone</label><input id="bPhone" placeholder="Mobile number"></div>
+          <div><label>Login Password</label><input id="bPass" placeholder="Simple password set karein"></div>
+        </div>
+        <button class="btn btn-green" style="margin-top:12px;" onclick="addDeliveryBoy()">Add Delivery Boy</button>
+      </div>
+      <div class="panel">
+        <h3>Sabhi Delivery Boys</h3>
+        <table>
+          <thead><tr><th>Naam</th><th>Phone</th><th>Active Orders</th><th>Status</th><th>Location</th><th>Action</th></tr></thead>
+          <tbody id="boysBody"><tr><td colspan="6" class="empty-row">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="view" id="view-settings">
+      <div class="panel">
+        <h3>🚚 Delivery Charges</h3>
+        <div class="form-grid">
+          <div><label>Delivery Charge (₹)</label><input id="stDeliveryCharge" type="number" min="0" placeholder="e.g. 30"></div>
+          <div><label>Free Delivery Kis Amount Ke Upar</label><input id="stFreeAbove" type="number" min="0" placeholder="e.g. 500 (0 = kabhi free nahi)"></div>
+        </div>
+        <p style="font-size:.8em;color:#888;margin-top:8px;">Agar order ka total is amount ya usse zyada hai, to delivery charge nahi lagega. 0 daalein to kabhi free delivery nahi hogi.</p>
+      </div>
+
+      <div class="panel">
+        <h3>🎉 Sale / Offer</h3>
+        <div class="form-grid">
+          <div><label>Sale Active?</label>
+            <select id="stSaleActive"><option value="false">Band (No Sale)</option><option value="true">Chalu (Sale Live)</option></select>
+          </div>
+          <div><label>Sale Ka Naam</label><input id="stSaleName" placeholder="e.g. Diwali Sale 🪔"></div>
+          <div><label>Discount Type</label>
+            <select id="stDiscountType">
+              <option value="percent">Percentage (%)</option>
+              <option value="flat">Flat Amount (₹)</option>
+            </select>
+          </div>
+          <div><label>Discount Value</label><input id="stDiscountValue" type="number" min="0" placeholder="e.g. 20 (for 20% ya ₹20)"></div>
+          <div><label>Minimum Order (₹) — Sale Lagu Karne Ke Liye</label><input id="stSaleMinOrder" type="number" min="0" placeholder="e.g. 200 (0 = koi minimum nahi)"></div>
+          <div><label>Max Discount Cap (₹) — Sirf % Ke Liye</label><input id="stMaxDiscount" type="number" min="0" placeholder="e.g. 150 (0 = koi cap nahi)"></div>
+        </div>
+        <p style="font-size:.8em;color:#888;margin-top:8px;">Jab tak "Sale Active" chalu hai, customers ko homepage par banner aur cart mein discount automatically dikhega/lagega.</p>
+      </div>
+
+      <button class="btn btn-green" onclick="saveSettings()">Settings Save Karein</button>
+      <span id="settingsSavedMsg" style="margin-left:10px;color:var(--green);font-size:.85em;display:none;">✓ Saved</span>
+    </div>
+  </main>
+</div>
+
+<div class="overlay" id="mapOverlay" onclick="if(event.target===this) closeMap()">
+  <div class="map-modal">
+    <div class="map-modal-head">
+      <h3 id="mapModalTitle">Live Location</h3>
+      <button class="close-x" onclick="closeMap()">&times;</button>
+    </div>
+    <iframe id="mapFrame" loading="lazy"></iframe>
+    <div class="map-meta" id="mapMeta"></div>
+    <a id="mapGoogleLink" class="btn btn-primary map-link" href="#" target="_blank" rel="noopener">Google Maps mein Kholein</a>
+  </div>
+</div>
+
+<!-- ============ FIREBASE SETUP ============ -->
+<!-- IMPORTANT: index.html jaisa hi SAME Firebase config yahan bhi daalein, taaki teeno
+     pages ek hi Firestore database use karein aur data sync ho. -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAWVKmhzDeuQDpbJpBekLiPYhE3X11zLbc",
+  authDomain: "online-shoping-9299a.firebaseapp.com",
+  projectId: "online-shoping-9299a",
+  storageBucket: "online-shoping-9299a.firebasestorage.app",
+  messagingSenderId: "175906698523",
+  appId: "1:175906698523:web:88a1ba267c88ca3b9a8fbe",
+  measurementId: "G-C6VKH85QPJ"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// Default admin password = "admin123". Ye Firestore doc settings/admin ke "password"
+// field se check hota hai; agar doc exist nahi karta to default use hota hai.
+const DEFAULT_ADMIN_PASS = "admin123";
+
+let products = [], orders = [], deliveryBoys = [];
+let editingProductId = null;
+let orderFilter = 'pending';
+let storeSettings = { deliveryCharge:0, freeDeliveryAbove:0, saleActive:false, saleName:'', discountType:'percent', discountValue:0, saleMinOrder:0, maxDiscount:0 };
+
+async function adminLogin(){
+  const pass = document.getElementById('adminPass').value;
+  let realPass = DEFAULT_ADMIN_PASS;
+  try{
+    const doc = await db.collection('settings').doc('admin').get();
+    if(doc.exists && doc.data().password) realPass = doc.data().password;
+  }catch(e){}
+  if(pass === realPass){
+    document.getElementById('loginScreen').style.display='none';
+    document.getElementById('app').style.display='block';
+    sessionStorage.setItem('sm_admin','1');
+    initListeners();
+  }else{
+    document.getElementById('loginErr').textContent = 'Galat password';
+  }
+}
+function logout(){
+  sessionStorage.removeItem('sm_admin');
+  location.reload();
+}
+if(sessionStorage.getItem('sm_admin')==='1'){
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('app').style.display='block';
+  initListeners();
+}
+
+function switchTab(tab){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+tab).classList.add('active');
+}
+
+function initListeners(){
+  db.collection('products').orderBy('name').onSnapshot(snap=>{
+    products = []; snap.forEach(d=>products.push({id:d.id,...d.data()}));
+    renderProducts(); renderDashboard();
+  });
+  db.collection('orders').orderBy('createdAt','desc').onSnapshot(snap=>{
+    orders = []; snap.forEach(d=>orders.push({id:d.id,...d.data()}));
+    renderOrders(); renderDashboard(); renderBoys();
+  });
+  db.collection('deliveryBoys').orderBy('name').onSnapshot(snap=>{
+    deliveryBoys = []; snap.forEach(d=>deliveryBoys.push({id:d.id,...d.data()}));
+    renderBoys(); renderOrders();
+  });
+  db.collection('settings').doc('store').onSnapshot(doc=>{
+    if(doc.exists){
+      storeSettings = Object.assign({}, storeSettings, doc.data());
+    }
+    fillSettingsForm();
+  });
+}
+
+// ---- Settings ----
+function fillSettingsForm(){
+  document.getElementById('stDeliveryCharge').value = storeSettings.deliveryCharge || 0;
+  document.getElementById('stFreeAbove').value = storeSettings.freeDeliveryAbove || 0;
+  document.getElementById('stSaleActive').value = storeSettings.saleActive ? 'true' : 'false';
+  document.getElementById('stSaleName').value = storeSettings.saleName || '';
+  document.getElementById('stDiscountType').value = storeSettings.discountType || 'percent';
+  document.getElementById('stDiscountValue').value = storeSettings.discountValue || 0;
+  document.getElementById('stSaleMinOrder').value = storeSettings.saleMinOrder || 0;
+  document.getElementById('stMaxDiscount').value = storeSettings.maxDiscount || 0;
+}
+async function saveSettings(){
+  const data = {
+    deliveryCharge: parseFloat(document.getElementById('stDeliveryCharge').value) || 0,
+    freeDeliveryAbove: parseFloat(document.getElementById('stFreeAbove').value) || 0,
+    saleActive: document.getElementById('stSaleActive').value === 'true',
+    saleName: document.getElementById('stSaleName').value.trim(),
+    discountType: document.getElementById('stDiscountType').value,
+    discountValue: parseFloat(document.getElementById('stDiscountValue').value) || 0,
+    saleMinOrder: parseFloat(document.getElementById('stSaleMinOrder').value) || 0,
+    maxDiscount: parseFloat(document.getElementById('stMaxDiscount').value) || 0
+  };
+  try{
+    await db.collection('settings').doc('store').set(data, {merge:true});
+    const msg = document.getElementById('settingsSavedMsg');
+    msg.style.display = 'inline';
+    setTimeout(()=>msg.style.display='none', 2000);
+  }catch(e){ alert('Error: '+e.message); }
+}
+
+// ---- Dashboard ----
+function renderDashboard(){
+  const pending = orders.filter(o=>o.status==='pending').length;
+  const active = orders.filter(o=>['confirmed','assigned','out_for_delivery'].includes(o.status)).length;
+  const delivered = orders.filter(o=>o.status==='delivered').length;
+  const revenue = orders.filter(o=>o.status==='delivered').reduce((s,o)=>s+(o.total||0),0);
+  document.getElementById('statRow').innerHTML = `
+    <div class="stat-card"><div class="num">${pending}</div><div class="lbl">Naye Orders</div></div>
+    <div class="stat-card"><div class="num">${active}</div><div class="lbl">Process Mein</div></div>
+    <div class="stat-card"><div class="num">${delivered}</div><div class="lbl">Delivered</div></div>
+    <div class="stat-card"><div class="num">₹${revenue}</div><div class="lbl">Total Revenue</div></div>
+    <div class="stat-card"><div class="num">${products.length}</div><div class="lbl">Products</div></div>
+    <div class="stat-card"><div class="num">${deliveryBoys.length}</div><div class="lbl">Delivery Boys</div></div>
+  `;
+  const body = document.getElementById('recentOrdersBody');
+  const recent = orders.slice(0,8);
+  body.innerHTML = recent.length ? recent.map(o=>`
+    <tr><td>#${o.id.slice(-8).toUpperCase()}</td><td>${escapeHtml(o.customerName)}</td>
+    <td>₹${o.total}</td><td><span class="badge b-${o.status}">${o.status}</span></td></tr>
+  `).join('') : '<tr><td colspan="4" class="empty-row">Koi order nahi</td></tr>';
+}
+
+// ---- Products ----
+function renderProducts(){
+  const body = document.getElementById('productsBody');
+  body.innerHTML = products.length ? products.map(p=>`
+    <tr>
+      <td><img class="thumb" src="${p.image||'https://placehold.co/60'}"></td>
+      <td>${escapeHtml(p.name)}</td>
+      <td>₹${p.price}</td>
+      <td>${p.stock}</td>
+      <td><span class="badge ${p.active?'b-delivered':'b-cancelled'}">${p.active?'Active':'Hidden'}</span></td>
+      <td>
+        <button class="btn btn-sm btn-primary" onclick="editProduct('${p.id}')">Edit</button>
+        <button class="btn btn-sm ${p.active?'btn-amber':'btn-green'}" onclick="toggleProductActive('${p.id}',${!p.active})">${p.active?'Hide':'Show'}</button>
+        <button class="btn btn-sm btn-red" onclick="deleteProduct('${p.id}')">Delete</button>
+      </td>
+    </tr>
+  `).join('') : '<tr><td colspan="6" class="empty-row">Koi product nahi hai</td></tr>';
+}
+function editProduct(id){
+  const p = products.find(x=>x.id===id);
+  if(!p) return;
+  editingProductId = id;
+  document.getElementById('pName').value = p.name;
+  document.getElementById('pPrice').value = p.price;
+  document.getElementById('pStock').value = p.stock;
+  document.getElementById('pCategory').value = p.category||'';
+  document.getElementById('pImage').value = p.image||'';
+  document.getElementById('prodFormTitle').textContent = 'Product Edit Karein';
+  document.getElementById('cancelEditBtn').style.display='inline-block';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function cancelEditProduct(){
+  editingProductId = null;
+  ['pName','pPrice','pStock','pCategory','pImage'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('prodFormTitle').textContent = 'Naya Product Add Karein';
+  document.getElementById('cancelEditBtn').style.display='none';
+}
+async function saveProduct(){
+  const name = document.getElementById('pName').value.trim();
+  const price = parseFloat(document.getElementById('pPrice').value);
+  const stock = parseInt(document.getElementById('pStock').value);
+  const category = document.getElementById('pCategory').value.trim();
+  const image = document.getElementById('pImage').value.trim();
+  if(!name || isNaN(price) || isNaN(stock)){ alert('Naam, price aur stock bharein'); return; }
+  const data = { name, price, stock, category: category||'', image: image||'', active: true };
+  try{
+    if(editingProductId){
+      await db.collection('products').doc(editingProductId).update(data);
+    }else{
+      await db.collection('products').add(data);
+    }
+    cancelEditProduct();
+  }catch(e){ alert('Error: '+e.message); }
+}
+function toggleProductActive(id, val){
+  db.collection('products').doc(id).update({active:val});
+}
+function deleteProduct(id){
+  if(confirm('Ye product delete karna hai?')) db.collection('products').doc(id).delete();
+}
+
+// ---- Orders ----
+function renderOrderFilters(){
+  const statuses = ['pending','confirmed','assigned','out_for_delivery','delivered','cancelled','all'];
+  document.getElementById('orderFilters').innerHTML = statuses.map(s=>
+    `<button class="${orderFilter===s?'active':''}" onclick="setOrderFilter('${s}')">${s.replace(/_/g,' ')}</button>`
+  ).join('');
+}
+function setOrderFilter(s){ orderFilter=s; renderOrderFilters(); renderOrders(); }
+renderOrderFilters();
+
+function renderOrders(){
+  const body = document.getElementById('ordersBody');
+  const list = orderFilter==='all' ? orders : orders.filter(o=>o.status===orderFilter);
+  if(!list.length){ body.innerHTML='<div class="empty-row">Koi order nahi</div>'; return; }
+  body.innerHTML = list.map(o=>{
+    let action = '';
+    if(o.status==='pending'){
+      action = `<button class="btn btn-sm btn-primary" onclick="setOrderStatus('${o.id}','confirmed')">Confirm</button>
+                 <button class="btn btn-sm btn-red" onclick="setOrderStatus('${o.id}','cancelled')">Cancel</button>`;
+    }else if(o.status==='confirmed'){
+      const boyOptions = deliveryBoys.filter(b=>b.active!==false).map(b=>`<option value="${b.id}">${escapeHtml(b.name)}</option>`).join('');
+      action = `<select id="boySel-${o.id}"><option value="">Delivery boy chunein</option>${boyOptions}</select>
+                 <button class="btn btn-sm btn-amber" onclick="assignBoy('${o.id}')">Assign</button>`;
+    }else if(o.status==='assigned' || o.status==='out_for_delivery'){
+      const boy = deliveryBoys.find(b=>b.id===o.deliveryBoyId);
+      const hasLoc = boy && boy.location && typeof boy.location.lat==='number';
+      action = `<span style="color:#888;font-size:.8em;">Delivery boy update karega</span>` +
+        (hasLoc
+          ? `<button class="btn btn-sm btn-loc" onclick="showLocation('${o.deliveryBoyId}')">🛵 Boy Live Location</button>`
+          : `<span class="no-loc">Boy location abhi available nahi</span>`);
+    }else{
+      action = `<span style="color:#888;font-size:.85em;">—</span>`;
+    }
+    return `<div class="order-row">
+      <div class="order-top">
+        <div class="order-col ord-order">
+          <span class="order-id">#${o.id.slice(-8).toUpperCase()}</span>
+        </div>
+        <div class="order-col ord-customer">
+          <span class="order-customer">${escapeHtml(o.customerName)}</span>
+          <span class="order-phone">${o.phone}</span>
+        </div>
+        <div class="order-col ord-address">
+          <span class="order-address">${escapeHtml(o.address||'')}</span>
+          ${o.location ? `<button class="btn btn-sm btn-loc" style="margin-top:4px;" onclick="showOrderLocation('${o.id}')">📍 Order Address Map</button>` : '<span class="no-loc">GPS nahi mila</span>'}
+        </div>
+      </div>
+      <div class="order-items-row">
+        ${o.items.map(i=>`
+          <div class="order-item-row">
+            <img src="${i.image||'https://placehold.co/60'}">
+            <span>${escapeHtml(i.name)} x${i.qty}</span>
+          </div>`).join('')}
+      </div>
+      <div class="order-meta-row">
+        <div class="order-total-block">
+          <div class="order-total">₹${o.total}</div>
+          ${(o.subtotal!==undefined) ? `<div class="order-subtotal">
+            Subtotal: ₹${o.subtotal}${o.discount ? `<br>Discount: −₹${o.discount}${o.saleName?' ('+escapeHtml(o.saleName)+')':''}` : ''}<br>
+            Delivery: ${o.deliveryCharge ? '₹'+o.deliveryCharge : 'FREE'}
+          </div>` : ''}
+        </div>
+        <div class="order-status-block">
+          <span class="badge b-${o.status}">${o.status.replace(/_/g,' ')}</span>
+          <span class="order-boy-block">${o.deliveryBoyName ? escapeHtml(o.deliveryBoyName) : '—'}</span>
+        </div>
+        <div class="order-actions-col">${action}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function setOrderStatus(id, status){
+  db.collection('orders').doc(id).update({status, updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+}
+function assignBoy(orderId){
+  const sel = document.getElementById('boySel-'+orderId);
+  const boyId = sel.value;
+  if(!boyId){ alert('Delivery boy chunein'); return; }
+  const boy = deliveryBoys.find(b=>b.id===boyId);
+  db.collection('orders').doc(orderId).update({
+    status:'assigned', deliveryBoyId:boyId, deliveryBoyName:boy.name,
+    updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+  });
+}
+
+// ---- Delivery Boys ----
+function addDeliveryBoy(){
+  const name = document.getElementById('bName').value.trim();
+  const phone = document.getElementById('bPhone').value.trim();
+  const pass = document.getElementById('bPass').value.trim();
+  if(!name || !phone || !pass){ alert('Sabhi fields bharein'); return; }
+  db.collection('deliveryBoys').add({name, phone, password:pass, active:true}).then(()=>{
+    document.getElementById('bName').value='';
+    document.getElementById('bPhone').value='';
+    document.getElementById('bPass').value='';
+  });
+}
+function renderBoys(){
+  const body = document.getElementById('boysBody');
+  body.innerHTML = deliveryBoys.length ? deliveryBoys.map(b=>{
+    const activeOrders = orders.filter(o=>o.deliveryBoyId===b.id && ['assigned','out_for_delivery'].includes(o.status)).length;
+    const hasLoc = b.location && typeof b.location.lat==='number';
+    return `<tr>
+      <td>${escapeHtml(b.name)}</td>
+      <td>${escapeHtml(b.phone)}</td>
+      <td>${activeOrders}</td>
+      <td><span class="badge ${b.active!==false?'b-delivered':'b-cancelled'}">${b.active!==false?'Active':'Inactive'}</span></td>
+      <td>${hasLoc ? `<button class="btn btn-sm btn-loc" onclick="showLocation('${b.id}')">📍 Dekhein</button>` : '<span class="no-loc">N/A</span>'}</td>
+      <td>
+        <button class="btn btn-sm ${b.active!==false?'btn-amber':'btn-green'}" onclick="toggleBoyActive('${b.id}',${b.active===false})">${b.active!==false?'Deactivate':'Activate'}</button>
+        <button class="btn btn-sm btn-red" onclick="deleteBoy('${b.id}')">Delete</button>
+      </td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="6" class="empty-row">Koi delivery boy nahi hai</td></tr>';
+}
+function toggleBoyActive(id,val){ db.collection('deliveryBoys').doc(id).update({active:val}); }
+function deleteBoy(id){
+  if(confirm('Ye delivery boy delete karna hai?')) db.collection('deliveryBoys').doc(id).delete();
+}
+
+// ---- Live Location Modal ----
+// Delivery boy ki location Firestore 'deliveryBoys/{id}' doc mein realtime update hoti hai
+// (delivery-boy.html se navigator.geolocation.watchPosition ke zariye). Yahan wahi doc
+// live sunte hain taaki map bina modal band kiye khud-ba-khud update hota rahe.
+let mapUnsub = null;
+
+function showLocation(boyId){
+  document.getElementById('mapOverlay').classList.add('show');
+  if(mapUnsub){ mapUnsub(); mapUnsub = null; }
+  mapUnsub = db.collection('deliveryBoys').doc(boyId).onSnapshot(doc=>{
+    if(!doc.exists){ closeMap(); return; }
+    const b = doc.data();
+    document.getElementById('mapModalTitle').textContent = 'Delivery Boy Live Location — ' + (b.name||'');
+    if(b.location && typeof b.location.lat === 'number'){
+      renderMap(b.location.lat, b.location.lng);
+      let when = 'abhi abhi';
+      if(b.locationUpdatedAt && b.locationUpdatedAt.toDate){
+        const secs = Math.max(0, Math.round((Date.now() - b.locationUpdatedAt.toDate().getTime())/1000));
+        when = secs < 60 ? secs+' second pehle' : Math.round(secs/60)+' minute pehle';
+      }
+      document.getElementById('mapMeta').textContent = `Last update: ${when} · ${b.location.lat.toFixed(5)}, ${b.location.lng.toFixed(5)}`;
+    }else{
+      document.getElementById('mapMeta').textContent = 'Location abhi available nahi hai';
+    }
+  });
+}
+
+// Order kahan se aaya (customer ka delivery address) — ye location fixed hai (jab order
+// place hua tha tab customer ka GPS point), isliye live listener ki zaroorat nahi.
+function showOrderLocation(orderId){
+  const o = orders.find(x=>x.id===orderId);
+  if(!o || !o.location) return;
+  if(mapUnsub){ mapUnsub(); mapUnsub = null; }
+  document.getElementById('mapOverlay').classList.add('show');
+  document.getElementById('mapModalTitle').textContent = 'Order Address — ' + (o.customerName||'');
+  renderMap(o.location.lat, o.location.lng);
+  document.getElementById('mapMeta').textContent =
+    (o.address ? 'Address: '+o.address+' · ' : '') + `${o.location.lat.toFixed(5)}, ${o.location.lng.toFixed(5)}`;
+}
+
+function renderMap(lat, lng){
+  const d = 0.01;
+  const bbox = `${lng-d},${lat-d},${lng+d},${lat+d}`;
+  document.getElementById('mapFrame').src =
+    `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat},${lng}`;
+  document.getElementById('mapGoogleLink').href = `https://www.google.com/maps?q=${lat},${lng}`;
+}
+
+function closeMap(){
+  document.getElementById('mapOverlay').classList.remove('show');
+  if(mapUnsub){ mapUnsub(); mapUnsub = null; }
+  document.getElementById('mapFrame').src = '';
+}
+
+function escapeHtml(s){
+  return (s||'').toString().replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+</script>
+</body>
+</html>
